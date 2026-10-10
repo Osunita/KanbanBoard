@@ -1,4 +1,6 @@
-# Kanban
+# Kanban (frontend)
+
+> Este README cubre solo el frontend Angular. El arranque completo del proyecto (base de datos, backend y frontend), la API y el troubleshooting general están en el [README raíz](../README.md).
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.2.2.
 
@@ -44,15 +46,7 @@ To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use th
 ng test
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+For a non-interactive run (CI-style), use `ng test --no-watch`.
 
 ## Additional Resources
 
