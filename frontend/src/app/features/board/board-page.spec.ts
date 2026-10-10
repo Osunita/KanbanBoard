@@ -1,9 +1,11 @@
-/** TEST-022 — board load error state (SPEC §12.2, board R4) plus the 404 state (board R1). */
+/** TEST-022 — board load error state (SPEC §12.2, board R4) plus the 404 state (board R1),
+ *  and the delta delete-confirmation scenario (AC-016) with column counters. */
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import type { Project } from '../../core/models/project.model';
+import type { Task } from '../../core/models/task.model';
 import { BoardPage } from './board-page';
 
 const project: Project = {
@@ -14,6 +16,18 @@ const project: Project = {
   updatedAt: '2026-10-10T09:00:00.000Z',
 };
 
+const makeTask = (id: number, position: number): Task => ({
+  id,
+  projectId: 1,
+  title: `Task ${id}`,
+  description: null,
+  status: 'TODO',
+  priority: 'MEDIUM',
+  position,
+  createdAt: '2026-10-10T09:00:00.000Z',
+  updatedAt: '2026-10-10T09:00:00.000Z',
+});
+
 const button = (element: HTMLElement, label: string): HTMLButtonElement | undefined =>
   Array.from(element.querySelectorAll('button')).find(
     (candidate) => candidate.textContent?.trim() === label,
@@ -21,6 +35,21 @@ const button = (element: HTMLElement, label: string): HTMLButtonElement | undefi
 
 describe('BoardPage', () => {
   let httpMock: HttpTestingController;
+
+  beforeAll(() => {
+    // jsdom lacks <dialog> modal semantics; shim for the always-rendered
+    // delete dialog (F7), same guard as task-form-dialog.spec.
+    if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
+      HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+        this.setAttribute('open', '');
+      };
+    }
+    if (typeof HTMLDialogElement.prototype.close !== 'function') {
+      HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+        this.removeAttribute('open');
+      };
+    }
+  });
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -87,5 +116,59 @@ describe('BoardPage', () => {
     expect(element.textContent).toContain('Proyecto no encontrado.');
     expect(element.textContent).toContain('Volver a proyectos');
     httpMock.expectNone(() => true);
+  });
+
+  it('AC-016/AC-020: renders column counters and deletes a task only after confirming', async () => {
+    const fixture = TestBed.createComponent(BoardPage);
+    fixture.componentRef.setInput('id', '1');
+    fixture.detectChanges();
+
+    httpMock.expectOne('/api/projects/1').flush(project);
+    httpMock
+      .expectOne('/api/projects/1/tasks')
+      .flush([makeTask(1, 0), makeTask(2, 1)]);
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const element = fixture.nativeElement as HTMLElement;
+    // Counters reflect the column size (2 TODO, 0 IN_PROGRESS, 0 DONE).
+    const counters = Array.from(element.querySelectorAll('.column-count')).map(
+      (counter) => counter.textContent?.trim(),
+    );
+    expect(counters).toEqual(['2', '0', '0']);
+
+    // The delete dialog is always rendered (F7) but not open yet. It is not the
+    // first <dialog> in the DOM (the task form dialog comes first), so locate it by text.
+    const dialog = Array.from(element.querySelectorAll('dialog')).find((candidate) =>
+      candidate.textContent?.includes('¿Eliminar esta tarea?'),
+    );
+    expect(dialog).toBeTruthy();
+    expect(dialog?.hasAttribute('open')).toBe(false);
+
+    // Eliminar on the first card opens the confirmation (first button in DOM order).
+    button(element, 'Eliminar')?.click();
+    fixture.detectChanges();
+    expect(dialog?.hasAttribute('open')).toBe(true);
+    expect(dialog?.textContent).toContain('¿Eliminar esta tarea?');
+    httpMock.expectNone(() => true);
+
+    // Confirming sends the DELETE; the column renumbers locally, no reload.
+    const confirmButton = Array.from(dialog?.querySelectorAll('button') ?? []).find(
+      (candidate) => candidate.textContent?.trim() === 'Eliminar',
+    );
+    confirmButton?.click();
+    httpMock
+      .expectOne('/api/tasks/1')
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(element.textContent).not.toContain('Task 1');
+    expect(element.textContent).toContain('Task 2');
+    const updated = Array.from(element.querySelectorAll('.column-count')).map(
+      (counter) => counter.textContent?.trim(),
+    );
+    expect(updated).toEqual(['1', '0', '0']);
+    expect(dialog?.hasAttribute('open')).toBe(false);
   });
 });

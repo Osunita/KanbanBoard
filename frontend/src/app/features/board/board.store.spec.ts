@@ -133,4 +133,17 @@ describe('BoardStore', () => {
       store.columns()[0].tasks.map((task) => task.position),
     ).toEqual([0, 1, 2]);
   });
+
+  it('dismisses the action error notice on demand (SPEC §8.4)', () => {
+    loadBoard();
+
+    store.move(1, 'IN_PROGRESS', 0);
+    httpMock
+      .expectOne('/api/tasks/1/move')
+      .flush(null, { status: 500, statusText: 'Internal Server Error' });
+    expect(store.actionError()).toBe('No se pudo completar la acción. Inténtalo de nuevo.');
+
+    store.dismissActionError();
+    expect(store.actionError()).toBeNull();
+  });
 });
