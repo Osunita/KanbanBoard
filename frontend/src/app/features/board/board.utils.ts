@@ -4,7 +4,7 @@ import { TASK_STATUSES, type Task, type TaskStatus } from '../../core/models/tas
  * Pure move of a task across/within board columns (SPEC §8.5.1) — the client
  * mirror of the backend semantics of SPEC §7.4:
  *
- * - never mutates the input list or any of its tasks;
+ * - never mutates the input list or its task objects;
  * - the task is inserted at `targetIndex` of the destination column computed
  *   WITHOUT the task itself (same rules as the server);
  * - `targetIndex` beyond the column size is clamped to the end (the CDK never
