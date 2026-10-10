@@ -1,0 +1,26 @@
+# PostgreSQL 18 for local development (SPEC §10.4).
+# Only the database runs in Docker; backend and frontend run on the host.
+#
+# NOTE (postgres:18): the official image moved its data directory —
+#   PGDATA is now /var/lib/postgresql/18/docker and the VOLUME is
+#   /var/lib/postgresql (previously /var/lib/postgresql/data).
+#   Verified against docker-library/postgres 18/bookworm/Dockerfile.
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kanban}
+      POSTGRES_USER: ${POSTGRES_USER:-kanban}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kanban_dev}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - kanban_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  kanban_pgdata:
