@@ -61,6 +61,18 @@ public class Task {
     protected Task() {
     }
 
+    /**
+     * New task for a project (D10). Status defaults to {@code TODO} (SPEC 7.1);
+     * the position invariant is owned by {@code TaskService} (SPEC 6.1).
+     */
+    public Task(Project project, String title, String description, TaskPriority priority, int position) {
+        this.project = project;
+        this.title = title;
+        this.description = description;
+        this.priority = priority;
+        this.position = position;
+    }
+
     public Long getId() {
         return id;
     }
