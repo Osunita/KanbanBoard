@@ -14,6 +14,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.not;
@@ -125,9 +127,9 @@ class ProjectApiIntegrationTest {
 
     @Test
     void listReturnsMostRecentFirst() throws Exception {
-        createProject("Primero");
-        Thread.sleep(25); // distinct createdAt (millisecond precision)
-        createProject("Segundo");
+        // Explicit distinct createdAt values (no sleeps → no clock-granularity flake).
+        seedProjectWithCreatedAt("Primero", Timestamp.from(Instant.parse("2026-01-01T10:00:00Z")));
+        seedProjectWithCreatedAt("Segundo", Timestamp.from(Instant.parse("2026-01-01T11:00:00Z")));
 
         mockMvc.perform(get("/api/projects"))
                 .andExpect(status().isOk())
@@ -320,5 +322,12 @@ class ProjectApiIntegrationTest {
         String body = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
         Number id = JsonPath.read(body, "$.id");
         return id.longValue();
+    }
+
+    /** Inserts a project with a fixed {@code created_at} (bypasses {@code now()} default). */
+    private void seedProjectWithCreatedAt(String name, Timestamp createdAt) {
+        jdbcTemplate.update(
+                "INSERT INTO project (name, created_at, updated_at) VALUES (?, ?, ?)",
+                name, createdAt, createdAt);
     }
 }
