@@ -1,0 +1,47 @@
+<dialog #dialogElement class="dialog" aria-labelledby="task-dialog-title">
+  @if (isEditing()) {
+    <h2 id="task-dialog-title">Editar</h2>
+  } @else {
+    <h2 id="task-dialog-title">Nueva tarea</h2>
+  }
+
+  <div class="field">
+    <label for="task-title">Título</label>
+    <input id="task-title" type="text" autocomplete="off" [formField]="taskForm.title" />
+    @if (taskForm.title().invalid()) {
+      <p class="field-error" role="alert">{{ taskForm.title().errors()[0]?.message }}</p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="task-description">Descripción</label>
+    <textarea id="task-description" rows="3" [formField]="taskForm.description"></textarea>
+    @if (taskForm.description().invalid()) {
+      <p class="field-error" role="alert">{{ taskForm.description().errors()[0]?.message }}</p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="task-priority">Prioridad</label>
+    <select id="task-priority" [formField]="taskForm.priority">
+      <option value="LOW">Baja</option>
+      <option value="MEDIUM">Media</option>
+      <option value="HIGH">Alta</option>
+    </select>
+    @if (taskForm.priority().invalid()) {
+      <p class="field-error" role="alert">{{ taskForm.priority().errors()[0]?.message }}</p>
+    }
+  </div>
+
+  <div class="actions">
+    <button type="button" (click)="close()">Cancelar</button>
+    <button
+      type="button"
+      class="primary"
+      [disabled]="taskForm().invalid() || saving()"
+      (click)="submit()"
+    >
+      Guardar
+    </button>
+  </div>
+</dialog>

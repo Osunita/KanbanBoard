@@ -1,0 +1,26 @@
+<article class="task-card">
+  <div class="task-head">
+    <h3 class="task-title">{{ task().title }}</h3>
+    <span
+      class="badge"
+      [class.badge-baja]="task().priority === 'LOW'"
+      [class.badge-media]="task().priority === 'MEDIUM'"
+      [class.badge-alta]="task().priority === 'HIGH'"
+    >
+      @if (task().priority === 'LOW') {
+        Baja
+      } @else if (task().priority === 'HIGH') {
+        Alta
+      } @else {
+        Media
+      }
+    </span>
+  </div>
+  @if (task().description) {
+    <p class="task-description">{{ task().description }}</p>
+  }
+  <div class="task-actions">
+    <button type="button" (click)="edit.emit(task())">Editar</button>
+    <button type="button" (click)="remove.emit(task())">Eliminar</button>
+  </div>
+</article>

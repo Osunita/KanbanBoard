@@ -1,0 +1,66 @@
+@if (notFound()) {
+  <div class="state">
+    <p>Proyecto no encontrado.</p>
+    <a routerLink="/projects">Volver a proyectos</a>
+  </div>
+} @else if (loadError()) {
+  <div class="state">
+    <p>No se pudieron cargar los datos.</p>
+    <button type="button" (click)="retry()">Reintentar</button>
+  </div>
+} @else if (loading()) {
+  <p class="state">Cargando…</p>
+} @else {
+  <header class="board-header">
+    <a class="back-link" routerLink="/projects">Volver a proyectos</a>
+    <h1 class="board-name">{{ project()?.name }}</h1>
+    <button type="button" class="primary" (click)="newTask()">Nueva tarea</button>
+  </header>
+
+  @if (store.actionError() !== null) {
+    <div class="notice" role="alert">
+      <span>{{ store.actionError() }}</span>
+      <button
+        type="button"
+        class="notice-dismiss"
+        aria-label="Cerrar aviso"
+        (click)="dismissActionError()"
+      >
+        ×
+      </button>
+    </div>
+  }
+
+  <div class="board">
+    @for (column of store.columns(); track column.status) {
+      <app-board-column
+        [status]="column.status"
+        [tasks]="column.tasks"
+        (dropped)="onDrop($event)"
+        (edit)="editTask($event)"
+        (remove)="requestDelete($event)"
+      />
+    }
+  </div>
+
+  <app-task-form-dialog
+    #formDialog
+    [saving]="store.saving()"
+    (save)="saveTask($event)"
+  />
+
+  <dialog #deleteDialog class="dialog">
+    <p>¿Eliminar esta tarea?</p>
+    <div class="actions">
+      <button type="button" (click)="cancelDelete()">Cancelar</button>
+      <button
+        type="button"
+        class="danger"
+        [disabled]="store.saving()"
+        (click)="confirmDelete()"
+      >
+        Eliminar
+      </button>
+    </div>
+  </dialog>
+}

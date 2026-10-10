@@ -1,0 +1,36 @@
+<section class="column">
+  <header class="column-header">
+    <h2 class="column-title">
+      @if (status() === 'TODO') {
+        Por hacer
+      } @else if (status() === 'IN_PROGRESS') {
+        En curso
+      } @else {
+        Hecha
+      }
+    </h2>
+    <span class="column-count">{{ count() }}</span>
+  </header>
+
+  <div
+    class="column-body"
+    cdkDropList
+    [id]="listId()"
+    [cdkDropListData]="tasks()"
+    [cdkDropListConnectedTo]="connectedTo()"
+    (cdkDropListDropped)="onDropped($event)"
+  >
+    @for (task of tasks(); track task.id) {
+      <app-task-card
+        cdkDrag
+        [cdkDragData]="task"
+        [task]="task"
+        (edit)="edit.emit($event)"
+        (remove)="remove.emit($event)"
+      />
+    }
+    @if (tasks().length === 0) {
+      <p class="column-empty">Sin tareas</p>
+    }
+  </div>
+</section>

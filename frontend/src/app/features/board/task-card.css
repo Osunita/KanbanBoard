@@ -1,0 +1,65 @@
+.task-card {
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  cursor: grab;
+}
+
+.task-card:active {
+  cursor: grabbing;
+}
+
+.task-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.task-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.badge {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+}
+
+.badge-baja {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.badge-media {
+  background: #fff4e5;
+  color: #a34f00;
+}
+
+.badge-alta {
+  background: #fdecea;
+  color: #b00020;
+}
+
+/* Two-line clamp (SPEC §8.4 / design CSS note). */
+.task-description {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: #444;
+}
+
+.task-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
