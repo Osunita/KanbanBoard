@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import java.nio.charset.StandardCharsets;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -27,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Integration tests for the project API against real PostgreSQL (SPEC 12.1/12.2):
- * TEST-001…004 plus the Fase 1 error cases (E-05, E-14, E-15, 405).
+ * TEST-001…004 plus the Fase 1 error cases (E-05, E-14, E-15, 404/405/415).
  * Docker is required; each test starts from a clean database (D5).
  */
 @SpringBootTest
@@ -245,6 +246,35 @@ class ProjectApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"X\"}"))
                 .andExpect(status().isMethodNotAllowed());
+    }
+
+    @Test
+    void unknownRouteReturns404ProblemDetail() throws Exception {
+        mockMvc.perform(get("/nope"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.title").value("Not Found"))
+                .andExpect(jsonPath("$.detail").isNotEmpty())
+                .andExpect(jsonPath("$.detail").value(not("Unexpected error")));
+    }
+
+    @Test
+    void trailingSlashOnProjectReturns404() throws Exception {
+        mockMvc.perform(get("/api/projects/1/"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.title").value("Not Found"))
+                .andExpect(jsonPath("$.detail").value(not("Unexpected error")));
+    }
+
+    @Test
+    void unsupportedContentTypeReturns415() throws Exception {
+        mockMvc.perform(post("/api/projects")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("name=Demo"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.title").value("Unsupported Media Type"))
+                .andExpect(jsonPath("$.detail").value(not("Unexpected error")));
     }
 
     @Test
