@@ -19,3 +19,11 @@ export function errorMessage(error: unknown): string {
   }
   return ACTION_ERROR_MESSAGE;
 }
+
+/**
+ * True when a request failed with HTTP 404. Used by the board to distinguish
+ * `Proyecto no encontrado.` (SPEC §8.4) from a generic load failure.
+ */
+export function isNotFound(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && error.status === 404;
+}
