@@ -98,7 +98,7 @@ class ProjectApiIntegrationTest {
     void deleteProjectRemovesItsTasksViaCascade() throws Exception {
         long projectId = createProject("Con tareas");
 
-        // Seed 2 task rows directly (task API belongs to Fase 2).
+        // Seed 2 task rows directly (keeps the test independent of the task API).
         jdbcTemplate.update(
                 "INSERT INTO task (project_id, title, status, priority, position) VALUES "
                         + "(?, 'A', 'TODO', 'MEDIUM', 0), (?, 'B', 'TODO', 'MEDIUM', 1)",
@@ -113,7 +113,11 @@ class ProjectApiIntegrationTest {
         Integer remaining = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM task WHERE project_id = ?", Integer.class, projectId);
         assertThat(remaining).isZero();
-        // Deferred to Fase 2 (D2): GET /api/projects/{id}/tasks must also 404.
+        // Fase 2: the endpoint now exists — completes the deferred assertion.
+        mockMvc.perform(get("/api/projects/" + projectId + "/tasks"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("Project " + projectId + " not found"));
     }
 
     // --- List (AC-003, ordering) --------------------------------------------
