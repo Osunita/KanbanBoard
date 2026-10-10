@@ -1,5 +1,5 @@
 /** Task create/edit dialog: Signal Forms `form()` inside a native `<dialog>` (DEC-018, F7). */
-import { Component, computed, input, output, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, input, output, signal, viewChild } from '@angular/core';
 import { FormField, form, maxLength, required, validate } from '@angular/forms/signals';
 import type { Task, TaskPriority } from '../../core/models/task.model';
 
@@ -24,7 +24,8 @@ export class TaskFormDialog {
 
   readonly save = output<TaskFormValue>();
 
-  private readonly dialogElement = viewChild.required<HTMLDialogElement>('dialogElement');
+  /** Template ref query returns an ElementRef (string refs read ElementRef by default). */
+  private readonly dialogElement = viewChild.required<ElementRef<HTMLDialogElement>>('dialogElement');
   private readonly editing = signal<Task | null>(null);
   private readonly model = signal<{ title: string; description: string; priority: TaskPriority }>({
     title: '',
@@ -56,11 +57,11 @@ export class TaskFormDialog {
       description: task?.description ?? '',
       priority: task?.priority ?? 'MEDIUM',
     });
-    this.dialogElement().showModal();
+    this.dialogElement().nativeElement.showModal();
   }
 
   close(): void {
-    this.dialogElement().close();
+    this.dialogElement().nativeElement.close();
   }
 
   protected submit(): void {
