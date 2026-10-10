@@ -1,0 +1,18 @@
+# Environment (never commit real secrets)
+.env
+
+# Backend build output
+backend/target/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+# IDEs
+.idea/
+.vscode/
+
+# Logs and OS files
+*.log
+.DS_Store
