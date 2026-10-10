@@ -4,7 +4,7 @@ Tablero Kanban simplificado (tipo Jira) para preparar una entrevista técnica: *
 
 Stack: **Java 25 · Spring Boot 4.1.1 · PostgreSQL 18 (Docker Compose) · Angular 22** (el frontend llega en la Fase 3 del plan). Usuario único, ejecución local, sin autenticación.
 
-> **Estado actual: Fase 1 completa** — backend con CRUD de proyectos y errores ProblemDetail. Tareas, tablero y frontend: fases posteriores.
+> **Estado actual: Fase 2 completa** — backend con CRUD de proyectos y tareas: crear, editar, borrar, `PATCH …/move` con renumeración de columnas y errores ProblemDetail. Frontend y tablero: Fase 3.
 
 ## Requisitos previos
 
@@ -44,7 +44,7 @@ cd backend
 - Un único contenedor PostgreSQL compartido para toda la ejecución; cada test empieza con la base limpia.
 - Tests de frontend (`npm test`): **pendiente (Fase 3)**.
 
-## API (endpoints de proyecto)
+## API (endpoints de proyecto y tareas)
 
 Base: `/api`. Fechas en ISO-8601 UTC. Errores en formato `application/problem+json` (RFC 9457).
 
@@ -55,8 +55,14 @@ Base: `/api`. Fechas en ISO-8601 UTC. Errores en formato `application/problem+js
 | `GET /api/projects/{id}` | — | 200 | 404 |
 | `PUT /api/projects/{id}` | `{name, description?}` (reemplaza ambos campos) | 200 | 400, 404 |
 | `DELETE /api/projects/{id}` | — | 204 (borra también sus tareas en cascada) | 404 |
+| `GET /api/projects/{projectId}/tasks` | — | 200, lista ordenada por columna y posición (`[]` si no hay) | 404 (proyecto) |
+| `POST /api/projects/{projectId}/tasks` | `{title, description?, priority?}` | 201 + `Location: /api/tasks/{id}` (siempre `TODO`, al final de la columna, prioridad por defecto `MEDIUM`) | 400, 404 |
+| `GET /api/tasks/{id}` | — | 200 | 404 |
+| `PUT /api/tasks/{id}` | `{title, description?, priority}` (reemplaza esos tres campos; **no** toca `status` ni `position`) | 200 | 400, 404 |
+| `PATCH /api/tasks/{id}/move` | `{status, position}` | 200, tarea actualizada | 400, 404 |
+| `DELETE /api/tasks/{id}` | — | 204 (renumera la columna de origen a `0..n-1`) | 404 |
 
-Los endpoints de tareas (`/api/projects/{id}/tasks`, `/api/tasks/{id}`, `PATCH …/move`) pertenecen a la **Fase 2**.
+`PATCH …/move` se ejecuta en **una sola transacción** (SPEC §7.4): posición fuera de rango → 400 con `detail` `Position P is out of range for column D (max N)` y **cero** cambios persistidos; mover a la misma columna y posición → 200 sin cambios. La invariante por columna es `0, 1, … n-1` sin huecos ni repetidos.
 
 ## Estructura del repositorio
 
@@ -91,10 +97,12 @@ kanban/
    $env:JAVA_HOME='C:\Program Files\Java\jdk-25.0.4.1'
    ```
 2. **Node.js instalado: v24.11.1** — por debajo del mínimo de Angular 22 (`^22.22.0 || ^24.13.1 || ^26.0.0`). Actualizar a ≥ 24.13.1 antes de la Fase 3.
-3. **TEST-004 adaptado (Fase 1):** la verificación de cascada siembra 2 tareas con `JdbcTemplate` a nivel de BD y comprueba `count(task) = 0` tras `DELETE`. La aserción `GET /api/projects/{id}/tasks` → 404 queda **diferida a la Fase 2** (cuando exista el endpoint).
+3. **TEST-004 completado (Fase 2):** la verificación de cascada siembra 2 tareas con `JdbcTemplate` a nivel de BD y comprueba `count(task) = 0` tras `DELETE`. La aserción `GET /api/projects/{id}/tasks` → 404, diferida en la Fase 1, ya está implementada en `ProjectApiIntegrationTest` (el endpoint existe desde la Fase 2).
 4. **`domain/Task`, `TaskStatus`, `TaskPriority` y `TaskRepository` ya existen** aunque el endpoint de tareas es Fase 2: así `ddl-auto=validate` valida todo el esquema `V1__init.sql` desde el primer arranque.
 5. **Módulo Testcontainers 2.x:** el artifactId del módulo PostgreSQL es `org.testcontainers:testcontainers-postgresql` (renombrado en Testcontainers 2.x; el BOM de Spring Boot 4.1.1 lo gestiona).
 6. Sin dependencias fuera de la lista del SPEC §9. No hay secretos reales en el repo; usa `.env` (ignorado por git) para overrides locales.
+7. **`@TrimmedSize` (validación "tras trim", SPEC §7.3):** `@Size` mide la longitud en bruto, pero el SPEC exige 1–200 *después de* `trim()`. Se usa una restricción propia en `web/validation/TrimmedSize.java` (Bean Validation estándar, sin dependencias nuevas) para `name` de proyecto y `title` de tarea.
+8. **Conversión DTO ↔ dominio (DEC-022):** los DTO son `record` con método estático `from(Entity)`. Como `from` recibe la entidad, el paquete `web` referencia el tipo de la entidad transientemente (DEC-022) pese a la regla general de la SPEC §4.2 de no devolver entidades por HTTP: la entidad se convierte a `record` inmediatamente y nunca se serializa. `TaskResponse.from` lee además `task.getProject().getId()` sobre el proxy lazy — solo el id, seguro con `open-in-view=false`. Para que `service` pueda instanciar tareas se añadió el constructor `Task(Project, title, description, priority, position)` (la entidad sigue sin lógica de negocio; el estado por defecto es `TODO`).
 
 ## Documentación
 
