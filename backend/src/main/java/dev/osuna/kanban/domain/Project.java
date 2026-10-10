@@ -39,6 +39,12 @@ public class Project {
     private Instant updatedAt;
 
     protected Project() {
+        // JPA
+    }
+
+    public Project(String name, String description) {
+        this.name = name;
+        this.description = description;
     }
 
     public Long getId() {
