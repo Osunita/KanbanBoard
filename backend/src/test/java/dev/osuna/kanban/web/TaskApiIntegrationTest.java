@@ -29,7 +29,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Integration tests for the task API against real PostgreSQL (SPEC 12.1/12.2):
- * TEST-005…014 plus the task E-cases (E-03 create/list in a missing project,
+ * TEST-005…014 plus the task E-cases (E-02 missing task on all four verbs,
+ * E-03 create/list in a missing project, E-07 negative move position, the
+ * description ≤ 2000 boundary, E-08 out-of-range into a non-empty column and
  * E-10/E-11 empty target column) and the carried {@code GET …/tasks → 404}
  * assertion that completes TEST-004. Docker is required; each test starts from
  * a clean database (the cascade in {@code @BeforeEach} clears tasks too).
@@ -193,6 +195,35 @@ class TaskApiIntegrationTest {
                 .andExpect(jsonPath("$[1].position").value(1));
     }
 
+    // --- E-07: negative move position (Bean Validation @Min(0)) -------------
+
+    @Test
+    void negativeMovePositionReturns400FieldErrorAndPersistsNothing() throws Exception {
+        long projectId = createProject("Tablero");
+        long a = createTask(projectId, "A");
+        createTask(projectId, "B");
+
+        mockMvc.perform(patch("/api/tasks/" + a + "/move")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"TODO\",\"position\":-1}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+                .andExpect(jsonPath("$.title").value("Bad Request"))
+                .andExpect(jsonPath("$.detail").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0].field").value("position"))
+                .andExpect(jsonPath("$.errors[0].message")
+                        .value("must be greater than or equal to 0"));
+
+        mockMvc.perform(get("/api/projects/" + projectId + "/tasks"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].title").value("A"))
+                .andExpect(jsonPath("$[0].status").value("TODO"))
+                .andExpect(jsonPath("$[0].position").value(0))
+                .andExpect(jsonPath("$[1].title").value("B"))
+                .andExpect(jsonPath("$[1].position").value(1));
+    }
+
     // --- TEST-010 / E-12: deleting the middle task renumbers ----------------
 
     @Test
@@ -291,6 +322,33 @@ class TaskApiIntegrationTest {
                 .andExpect(jsonPath("$.errors[0].message").value("size must be between 1 and 200"));
     }
 
+    // --- task description length boundaries (SPEC 7.3, ≤ 2000) --------------
+
+    @Test
+    void descriptionOfExactly2000CharsIsAccepted() throws Exception {
+        long projectId = createProject("Tablero");
+
+        mockMvc.perform(post("/api/projects/" + projectId + "/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"T\",\"description\":\"" + "d".repeat(2000) + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.description").value("d".repeat(2000)));
+    }
+
+    @Test
+    void descriptionOf2001CharsIsRejected() throws Exception {
+        long projectId = createProject("Tablero");
+
+        mockMvc.perform(post("/api/projects/" + projectId + "/tasks")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"T\",\"description\":\"" + "d".repeat(2001) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+                .andExpect(jsonPath("$.detail").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0].field").value("description"))
+                .andExpect(jsonPath("$.errors[0].message").value("size must be between 0 and 2000"));
+    }
+
     // --- E-03: missing project (create and list) ----------------------------
 
     @Test
@@ -315,6 +373,31 @@ class TaskApiIntegrationTest {
                 .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
                 .andExpect(jsonPath("$.title").value("Not Found"))
                 .andExpect(jsonPath("$.detail").value("Project 999 not found"));
+    }
+
+    // --- E-02: missing task (GET / PUT / PATCH move / DELETE) ---------------
+
+    @Test
+    void missingTaskReturns404OnAllFourVerbs() throws Exception {
+        // Valid bodies on PUT/move so the 404 comes from the task lookup, not
+        // from bean validation (which would short-circuit with a 400).
+        var requests = java.util.List.of(
+                get("/api/tasks/999"),
+                put("/api/tasks/999")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"title\":\"X\",\"priority\":\"LOW\"}"),
+                patch("/api/tasks/999/move")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"TODO\",\"position\":0}"),
+                delete("/api/tasks/999"));
+
+        for (var request : requests) {
+            mockMvc.perform(request)
+                    .andExpect(status().isNotFound())
+                    .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+                    .andExpect(jsonPath("$.title").value("Not Found"))
+                    .andExpect(jsonPath("$.detail").value("Task 999 not found"));
+        }
     }
 
     // --- E-10 / E-11: empty target column -----------------------------------
@@ -365,6 +448,55 @@ class TaskApiIntegrationTest {
                 .andExpect(jsonPath("$[0].position").value(0))
                 .andExpect(jsonPath("$[1].status").value("TODO"))
                 .andExpect(jsonPath("$[1].position").value(1));
+    }
+
+    // --- E-08: out-of-range into a NON-EMPTY target (max > 0 formatting) ----
+
+    @Test
+    void outOfRangeMoveIntoNonEmptyColumnReportsMaxSize() throws Exception {
+        long projectId = createProject("Tablero");
+        long a = createTask(projectId, "A");
+        long b = createTask(projectId, "B");
+        long c = createTask(projectId, "C");
+        long d = createTask(projectId, "D");
+
+        // Fill IN_PROGRESS with three tasks (positions 0, 1, 2).
+        mockMvc.perform(patch("/api/tasks/" + b + "/move")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"IN_PROGRESS\",\"position\":0}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(patch("/api/tasks/" + c + "/move")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"IN_PROGRESS\",\"position\":1}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(patch("/api/tasks/" + d + "/move")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"IN_PROGRESS\",\"position\":2}"))
+                .andExpect(status().isOk());
+
+        // position 4 > 3 → the message must render "max 3", not "max 0".
+        mockMvc.perform(patch("/api/tasks/" + a + "/move")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"IN_PROGRESS\",\"position\":4}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(PROBLEM_JSON))
+                .andExpect(jsonPath("$.title").value("Bad Request"))
+                .andExpect(jsonPath("$.detail")
+                        .value("Position 4 is out of range for column IN_PROGRESS (max 3)"));
+
+        // Zero persistence: A untouched in TODO, IN_PROGRESS still 0..2.
+        mockMvc.perform(get("/api/projects/" + projectId + "/tasks"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(4))
+                .andExpect(jsonPath("$[0].title").value("A"))
+                .andExpect(jsonPath("$[0].status").value("TODO"))
+                .andExpect(jsonPath("$[0].position").value(0))
+                .andExpect(jsonPath("$[1].status").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$[1].position").value(0))
+                .andExpect(jsonPath("$[2].status").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$[2].position").value(1))
+                .andExpect(jsonPath("$[3].status").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$[3].position").value(2));
     }
 
     // --- helpers -------------------------------------------------------------
