@@ -1,5 +1,6 @@
 package dev.osuna.kanban.web.error;
 
+import dev.osuna.kanban.service.InvalidPositionException;
 import dev.osuna.kanban.service.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ProblemDetail handleNotFound(ResourceNotFoundException ex) {
         return problem(HttpStatus.NOT_FOUND, "Not Found", ex.getMessage());
+    }
+
+    /** Move position outside the target column (SPEC 7.4 step 3, 7.5): 400 with the exception message as detail. */
+    @ExceptionHandler(InvalidPositionException.class)
+    public ProblemDetail handleInvalidPosition(InvalidPositionException ex) {
+        return problem(HttpStatus.BAD_REQUEST, "Bad Request", ex.getMessage());
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
