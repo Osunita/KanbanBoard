@@ -21,22 +21,6 @@ const button = (element: HTMLElement, label: string): HTMLButtonElement | undefi
   );
 
 describe('TaskFormDialog', () => {
-  beforeAll(() => {
-    // jsdom implements the <dialog> element but not its modal semantics
-    // (showModal/close are missing); shim them so the always-rendered
-    // dialog (F7) can be exercised.
-    if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
-      HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
-        this.setAttribute('open', '');
-      };
-    }
-    if (typeof HTMLDialogElement.prototype.close !== 'function') {
-      HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
-        this.removeAttribute('open');
-      };
-    }
-  });
-
   beforeEach(async () => {
     await TestBed.configureTestingModule({ imports: [TaskFormDialog] }).compileComponents();
   });

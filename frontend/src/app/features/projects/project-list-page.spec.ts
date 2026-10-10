@@ -22,20 +22,6 @@ const button = (element: HTMLElement, label: string): HTMLButtonElement | undefi
 describe('ProjectListPage', () => {
   let httpMock: HttpTestingController;
 
-  beforeAll(() => {
-    // jsdom lacks <dialog> modal semantics; shim for requestDelete/confirmDelete (F7).
-    if (typeof HTMLDialogElement.prototype.showModal !== 'function') {
-      HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
-        this.setAttribute('open', '');
-      };
-    }
-    if (typeof HTMLDialogElement.prototype.close !== 'function') {
-      HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
-        this.removeAttribute('open');
-      };
-    }
-  });
-
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ProjectListPage],
