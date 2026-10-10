@@ -1,5 +1,5 @@
 /** Board screen (SPEC §8.4–8.6): route id, project header, columns, dialogs and states. */
-import { Component, computed, inject, input, OnInit, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, inject, input, OnInit, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ProjectApi } from '../../core/api/project-api';
 import { isNotFound } from '../../core/error/error-message';
@@ -31,7 +31,8 @@ export class BoardPage implements OnInit {
   private readonly pendingDelete = signal<Task | null>(null);
 
   private readonly formDialog = viewChild.required<TaskFormDialog>('formDialog');
-  private readonly deleteDialog = viewChild.required<HTMLDialogElement>('deleteDialog');
+  /** Template ref query returns an ElementRef (string refs read ElementRef by default). */
+  private readonly deleteDialog = viewChild.required<ElementRef<HTMLDialogElement>>('deleteDialog');
 
   ngOnInit(): void {
     this.load();
@@ -100,11 +101,11 @@ export class BoardPage implements OnInit {
 
   protected requestDelete(task: Task): void {
     this.pendingDelete.set(task);
-    this.deleteDialog().showModal();
+    this.deleteDialog().nativeElement.showModal();
   }
 
   protected cancelDelete(): void {
-    this.deleteDialog().close();
+    this.deleteDialog().nativeElement.close();
     this.pendingDelete.set(null);
   }
 
@@ -114,7 +115,7 @@ export class BoardPage implements OnInit {
       return;
     }
     this.store.delete(task.id, () => {
-      this.deleteDialog().close();
+      this.deleteDialog().nativeElement.close();
       this.pendingDelete.set(null);
     });
   }

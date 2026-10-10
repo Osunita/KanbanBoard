@@ -1,5 +1,5 @@
 /** Project create/edit dialog: Signal Forms `form()` inside a native `<dialog>` (DEC-018, F7). */
-import { Component, computed, input, output, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, input, output, signal, viewChild } from '@angular/core';
 import { FormField, form, maxLength, required, validate } from '@angular/forms/signals';
 import type { Project } from '../../core/models/project.model';
 
@@ -23,7 +23,8 @@ export class ProjectFormDialog {
 
   readonly save = output<ProjectFormValue>();
 
-  private readonly dialogElement = viewChild.required<HTMLDialogElement>('dialogElement');
+  /** Template ref query returns an ElementRef (string refs read ElementRef by default). */
+  private readonly dialogElement = viewChild.required<ElementRef<HTMLDialogElement>>('dialogElement');
   private readonly editing = signal<Project | null>(null);
   private readonly model = signal<{ name: string; description: string }>({
     name: '',
@@ -49,11 +50,11 @@ export class ProjectFormDialog {
   open(project: Project | null): void {
     this.editing.set(project);
     this.model.set({ name: project?.name ?? '', description: project?.description ?? '' });
-    this.dialogElement().showModal();
+    this.dialogElement().nativeElement.showModal();
   }
 
   close(): void {
-    this.dialogElement().close();
+    this.dialogElement().nativeElement.close();
   }
 
   protected submit(): void {

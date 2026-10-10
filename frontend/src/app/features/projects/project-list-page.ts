@@ -1,5 +1,5 @@
 /** Projects list screen (SPEC §8.3): httpResource list, four states, CRUD dialogs. */
-import { Component, computed, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ProjectApi } from '../../core/api/project-api';
@@ -33,7 +33,8 @@ export class ProjectListPage {
   private readonly pendingDelete = signal<Project | null>(null);
 
   private readonly formDialog = viewChild.required<ProjectFormDialog>('formDialog');
-  private readonly deleteDialog = viewChild.required<HTMLDialogElement>('deleteDialog');
+  /** Template ref query returns an ElementRef (string refs read ElementRef by default). */
+  private readonly deleteDialog = viewChild.required<ElementRef<HTMLDialogElement>>('deleteDialog');
 
   newProject(): void {
     this.editingProject.set(null);
@@ -68,11 +69,11 @@ export class ProjectListPage {
 
   requestDelete(project: Project): void {
     this.pendingDelete.set(project);
-    this.deleteDialog().showModal();
+    this.deleteDialog().nativeElement.showModal();
   }
 
   cancelDelete(): void {
-    this.deleteDialog().close();
+    this.deleteDialog().nativeElement.close();
     this.pendingDelete.set(null);
   }
 
@@ -85,13 +86,13 @@ export class ProjectListPage {
     this.api.remove(project.id).subscribe({
       next: () => {
         this.deleting.set(false);
-        this.deleteDialog().close();
+        this.deleteDialog().nativeElement.close();
         this.pendingDelete.set(null);
         this.projects.reload();
       },
       error: (err: unknown) => {
         this.deleting.set(false);
-        this.deleteDialog().close();
+        this.deleteDialog().nativeElement.close();
         this.pendingDelete.set(null);
         this.notice.set(errorMessage(err));
       },
