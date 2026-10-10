@@ -1,0 +1,55 @@
+<div class="toolbar">
+  <button type="button" class="primary" (click)="newProject()">Nuevo proyecto</button>
+</div>
+
+@if (notice() !== null) {
+  <div class="notice" role="alert">
+    <span>{{ notice() }}</span>
+    <button
+      type="button"
+      class="notice-dismiss"
+      aria-label="Cerrar aviso"
+      (click)="dismissNotice()"
+    >
+      ×
+    </button>
+  </div>
+}
+
+@if (projects.status() === 'error') {
+  <div class="state">
+    <p>No se pudieron cargar los datos.</p>
+    <button type="button" (click)="retry()">Reintentar</button>
+  </div>
+} @else if (!projects.hasValue()) {
+  <p class="state">Cargando…</p>
+} @else if (list().length === 0) {
+  <p class="state">Aún no hay proyectos. Crea el primero.</p>
+} @else {
+  <ul class="project-list">
+    @for (project of list(); track project.id) {
+      <li class="project-card">
+        <a class="project-name" [routerLink]="['/projects', project.id]">{{ project.name }}</a>
+        @if (project.description) {
+          <p class="project-description">{{ project.description }}</p>
+        }
+        <div class="project-actions">
+          <button type="button" (click)="edit(project)">Editar</button>
+          <button type="button" (click)="requestDelete(project)">Eliminar</button>
+        </div>
+      </li>
+    }
+  </ul>
+}
+
+<app-project-form-dialog #formDialog [saving]="saving()" (save)="saveProject($event)" />
+
+<dialog #deleteDialog class="dialog">
+  <p>Se eliminará el proyecto y todas sus tareas. Esta acción no se puede deshacer.</p>
+  <div class="actions">
+    <button type="button" (click)="cancelDelete()">Cancelar</button>
+    <button type="button" class="danger" [disabled]="deleting()" (click)="confirmDelete()">
+      Eliminar
+    </button>
+  </div>
+</dialog>

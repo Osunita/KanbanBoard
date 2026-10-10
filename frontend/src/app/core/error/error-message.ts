@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import type { ProblemDetail } from '../models/problem-detail.model';
 
-/** Default text for any failed action (SPEC §8.2). */
+/** Default text for a failed action (SPEC §8.2). */
 export const ACTION_ERROR_MESSAGE = 'No se pudo completar la acción. Inténtalo de nuevo.';
 
 /**

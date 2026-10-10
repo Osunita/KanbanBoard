@@ -1,0 +1,35 @@
+<dialog #dialogElement class="dialog" aria-labelledby="project-dialog-title">
+  @if (isEditing()) {
+    <h2 id="project-dialog-title">Editar</h2>
+  } @else {
+    <h2 id="project-dialog-title">Nuevo proyecto</h2>
+  }
+
+  <div class="field">
+    <label for="project-name">Nombre</label>
+    <input id="project-name" type="text" autocomplete="off" [formField]="projectForm.name" />
+    @if (projectForm.name().invalid()) {
+      <p class="field-error" role="alert">{{ projectForm.name().errors()[0]?.message }}</p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="project-description">Descripción</label>
+    <textarea id="project-description" rows="3" [formField]="projectForm.description"></textarea>
+    @if (projectForm.description().invalid()) {
+      <p class="field-error" role="alert">{{ projectForm.description().errors()[0]?.message }}</p>
+    }
+  </div>
+
+  <div class="actions">
+    <button type="button" (click)="close()">Cancelar</button>
+    <button
+      type="button"
+      class="primary"
+      [disabled]="projectForm().invalid() || saving()"
+      (click)="submit()"
+    >
+      Guardar
+    </button>
+  </div>
+</dialog>
