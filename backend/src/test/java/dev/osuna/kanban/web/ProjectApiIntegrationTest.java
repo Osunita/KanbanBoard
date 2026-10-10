@@ -28,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Integration tests for the project API against real PostgreSQL (SPEC 12.1/12.2):
- * TEST-001…004 plus the Fase 1 error cases (E-05, E-14, E-15, 404/405/415).
+ * TEST-001…004 plus the Fase 1 error cases (E-05, E-14, E-15, 404/405/415, trimmed length).
  * Docker is required; each test starts from a clean database (D5).
  */
 @SpringBootTest
@@ -207,6 +207,30 @@ class ProjectApiIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[0].field").value("name"))
                 .andExpect(jsonPath("$.errors[0].message").value("size must be between 1 and 100"));
+    }
+
+    // SPEC 7.3: the name length rule applies "tras trim" (after trimming).
+
+    @Test
+    void paddedNameOf101CharsAfterTrimIsRejected() throws Exception {
+        String raw = "a".repeat(101) + " ".repeat(19); // 120 chars raw, 101 after trim
+        mockMvc.perform(post("/api/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + raw + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.errors[0].field").value("name"))
+                .andExpect(jsonPath("$.errors[0].message").value("size must be between 1 and 100"));
+    }
+
+    @Test
+    void paddedNameOfExactly100CharsAfterTrimIsAccepted() throws Exception {
+        String raw = " ".repeat(10) + "b".repeat(100) + " ".repeat(10); // 120 chars raw, 100 after trim
+        mockMvc.perform(post("/api/projects")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"" + raw + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("b".repeat(100)));
     }
 
     @Test
