@@ -102,9 +102,3 @@ kanban/
 | `ng serve`/`npm start` falla con error de versiones de Node | Angular 22 exige Node `^22.22.0 \|\| ^24.13.1 \|\| ^26.0.0`. Actualiza a Node 24.x ≥ 24.13.1 (`node -v`). |
 | El frontend no carga datos (404 en `/api/...`) | El backend no está en marcha en el 8080, o `proxy.conf.json` no está activo. Arranca el backend primero; `ng serve` usa el proxy automáticamente. |
 | Puerto 4200 ocupado | `ng serve` avisa y propone otro puerto; también puedes forzarlo con `ng serve --port 4201`. |
-
-
-## Documentación
-
-- Especificación técnica completa: [`docs/SPEC.md`](docs/SPEC.md) — **prevalece** sobre cualquier suposición de este README.
-- Reglas para asistentes agénticos: [`AGENTS.md`](AGENTS.md).
