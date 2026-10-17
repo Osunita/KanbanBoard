@@ -16,3 +16,14 @@ frontend/.angular/
 # Logs and OS files
 *.log
 .DS_Store
+
+# Agent instructions (not needed for the project)
+AGENTS.md
+CLAUDE.md
+
+# SDD artifacts (development process, not project code)
+openspec/
+.atl/
+
+# Skill registry
+.atl/skill-registry.md
