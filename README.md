@@ -75,9 +75,6 @@ Base: `/api`. Fechas en ISO-8601 UTC. Errores en formato `application/problem+js
 
 ```
 kanban/
-├── AGENTS.md            fuente de verdad de las reglas del proyecto
-├── CLAUDE.md            → @AGENTS.md
-├── docs/SPEC.md         especificación técnica completa
 ├── compose.yaml         PostgreSQL 18 (servicio db)
 ├── backend/             Spring Boot 4.1.1 (web → service → repository → domain)
 │   └── src/main/java/dev/osuna/kanban/
