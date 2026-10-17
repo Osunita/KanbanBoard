@@ -103,21 +103,6 @@ kanban/
 | El frontend no carga datos (404 en `/api/...`) | El backend no está en marcha en el 8080, o `proxy.conf.json` no está activo. Arranca el backend primero; `ng serve` usa el proxy automáticamente. |
 | Puerto 4200 ocupado | `ng serve` avisa y propone otro puerto; también puedes forzarlo con `ng serve --port 4201`. |
 
-## Notas de implementación
-
-1. **`JAVA_HOME` en esta máquina apunta a JDK 17.** Antes de ejecutar Maven define el JDK 25:
-   ```powershell
-   $env:JAVA_HOME='C:\Program Files\Java\jdk-25.0.4.1'
-   ```
-2. **Node.js actualizado a v24.20.0** (≥ 24.13.1, mínimo de Angular 22). La nota quedó pendiente en la Fase 2 y se cerró en la Fase 3.
-3. **TEST-004 completado (Fase 2):** la verificación de cascada siembra 2 tareas con `JdbcTemplate` a nivel de BD y comprueba `count(task) = 0` tras `DELETE`. La aserción `GET /api/projects/{id}/tasks` → 404, diferida en la Fase 1, ya está implementada en `ProjectApiIntegrationTest` (el endpoint existe desde la Fase 2).
-4. **`domain/Task`, `TaskStatus`, `TaskPriority` y `TaskRepository` ya existen** aunque el endpoint de tareas es Fase 2: así `ddl-auto=validate` valida todo el esquema `V1__init.sql` desde el primer arranque.
-5. **Módulo Testcontainers 2.x:** el artifactId del módulo PostgreSQL es `org.testcontainers:testcontainers-postgresql` (renombrado en Testcontainers 2.x; el BOM de Spring Boot 4.1.1 lo gestiona).
-6. Sin dependencias fuera de la lista del SPEC §9. No hay secretos reales en el repo; usa `.env` (ignorado por git) para overrides locales.
-7. **`@TrimmedSize` (validación "tras trim", SPEC §7.3):** `@Size` mide la longitud en bruto, pero el SPEC exige 1–200 *después de* `trim()`. Se usa una restricción propia en `web/validation/TrimmedSize.java` (Bean Validation estándar, sin dependencias nuevas) para `name` de proyecto y `title` de tarea.
-8. **Conversión DTO ↔ dominio (DEC-022):** los DTO son `record` con método estático `from(Entity)`. Como `from` recibe la entidad, el paquete `web` referencia el tipo de la entidad transientemente (DEC-022) pese a la regla general de la SPEC §4.2 de no devolver entidades por HTTP: la entidad se convierte a `record` inmediatamente y nunca se serializa. `TaskResponse.from` lee además `task.getProject().getId()` sobre el proxy lazy — solo el id, seguro con `open-in-view=false`. Para que `service` pueda instanciar tareas se añadió el constructor `Task(Project, title, description, priority, position)` (la entidad sigue sin lógica de negocio; el estado por defecto es `TODO`).
-9. **Frontend (Fase 3):** estado con **signals** (`BoardStore`) y `httpResource` solo para la lista de proyectos (DEC-014). Formularios con **Signal Forms** (`form()` de `@angular/forms/signals`) dentro de `<dialog>` nativo (DEC-018). Arrastrar y soltar con `@angular/cdk/drag-drop` (DEC-013). El `HttpClient` vive únicamente en `core/api/*`; las páginas/componentes no lo importan. El movimiento de tareas usa **actualización optimista** con rollback y reconciliación silenciosa (SPEC §8.5). *Caveat:* si la reconciliación silenciosa (`GET …/tasks` posterior a un `move` exitoso) falla, el error queda silencioso y la UI conserva el estado optimista (advierte la tarjeta hasta el siguiente movimiento o recarga); es intencional para no molestar con errores de fondo.
-10. **[SUP] Limitaciones de concurrencia y orden (suposición; el "Anexo A" referenciado en el SPEC §13 Fase 4 no está incluido en `docs/SPEC.md`, por lo que se documenta aquí como suposición — SUP-05 / DEC-020).** Última escritura gana: no hay bloqueo optimista (`@Version`) ni contención entre ediciones concurrentes. El renumerado de posiciones es O(n) por columna (renumeración completa al crear/mover/borrar); irrelevante a esta escala. Dos pestañas moviendo tareas a la vez pueden pisarse (caso E-20); la reconciliación silenciosa tras cada movimiento deja la UI consistente con el servidor en el siguiente movimiento o recarga. Sin control de concurrencia en el MVP por diseño.
 
 ## Documentación
 
